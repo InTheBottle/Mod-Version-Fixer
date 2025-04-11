@@ -1,3 +1,4 @@
+# Attempt to import PyQt6 first, then fall back to PySide2 if PyQt6 is unavailable
 try:
     from PyQt6.QtWidgets import QMessageBox, QFileDialog
     from PyQt6.QtGui import QIcon
@@ -37,7 +38,6 @@ from typing import List
 class FolderModVersionUpdater(mobase.IPluginTool):
     def __init__(self):
         super().__init__()
-
         self.__organizer = None  
         self.__parent_widget = None
 
@@ -58,7 +58,7 @@ class FolderModVersionUpdater(mobase.IPluginTool):
         return "Mod Version Fixer"
 
     def author(self) -> str:
-        return "YourName"  # Change to your name
+        return "Bottle"
 
     def description(self) -> str:
         return (
@@ -120,6 +120,8 @@ class FolderModVersionUpdater(mobase.IPluginTool):
         Opens a folder selection dialog for the user to choose their mods folder.
         Iterates over each subfolder, reading meta.ini from the [General] section,
         and if the recorded 'version' differs from 'newestVersion', updates the file.
+        After the update summary is shown, the plugin calls refresh(True) on the organizer 
+        to refresh MO2 (simulate F5) when the user closes the message box.
         """
         mods_folder = QFileDialog.getExistingDirectory(
             self.__parent_widget,
@@ -135,8 +137,6 @@ class FolderModVersionUpdater(mobase.IPluginTool):
         skipped = 0
         errors = 0
         updated_details = []
-        skipped_details = []
-        error_details = []
 
         print(f"Scanning mods folder: {mods_folder}")
         # Process each subdirectory (each mod folder)
@@ -149,7 +149,6 @@ class FolderModVersionUpdater(mobase.IPluginTool):
             if not os.path.exists(meta_ini_path):
                 print(f"  Skipping '{item}': meta.ini not found.")
                 skipped += 1
-                skipped_details.append(f"{item} (meta.ini not found)")
                 continue
 
             config = configparser.ConfigParser()
@@ -158,13 +157,11 @@ class FolderModVersionUpdater(mobase.IPluginTool):
             except Exception as e:
                 print(f"  Error reading meta.ini for '{item}': {e}")
                 errors += 1
-                error_details.append(f"{item} (read error: {e})")
                 continue
 
             if "General" not in config:
                 print(f"  Skipping '{item}': [General] section not found in meta.ini.")
                 skipped += 1
-                skipped_details.append(f"{item} ([General] section missing)")
                 continue
 
             general = config["General"]
@@ -174,14 +171,13 @@ class FolderModVersionUpdater(mobase.IPluginTool):
             if not newest_version_str:
                 print(f"  Skipping '{item}': 'newestVersion' not set.")
                 skipped += 1
-                skipped_details.append(f"{item} (no newestVersion)")
                 continue
 
             if not current_version_str:
                 print(f"  '{item}': No recorded version; treating as '0.0.0'.")
                 current_version_str = "0.0.0"
 
-            # Instead of comparing parsed versions, compare the raw strings.
+            # Compare raw strings; update if they differ
             if current_version_str != newest_version_str:
                 print(f"  Updating '{item}': {current_version_str} → {newest_version_str}")
                 general["version"] = newest_version_str
@@ -193,34 +189,37 @@ class FolderModVersionUpdater(mobase.IPluginTool):
                 except Exception as e:
                     print(f"  Error writing updated meta.ini for '{item}': {e}")
                     errors += 1
-                    error_details.append(f"{item} (write error: {e})")
             else:
                 print(f"  '{item}' is already up-to-date (Recorded version: {current_version_str}).")
 
-        summary_lines = []
-        summary_lines.append(f"Mods folder scanned: {mods_folder}")
-        summary_lines.append(f"Total mod folders processed: {len(os.listdir(mods_folder))}")
-        summary_lines.append(f"Updated mods: {updated}")
-        summary_lines.append(f"Skipped mods: {skipped}")
-        summary_lines.append(f"Errors: {errors}")
+        # Build summary: show update details for updated mods, and only total counts for skipped and errors.
+        summary_lines = [
+            f"Mods folder scanned: {mods_folder}",
+            f"Total mod folders processed: {len(os.listdir(mods_folder))}",
+            f"Updated mods: {updated}",
+            f"Skipped mods: {skipped}",
+            f"Errors: {errors}"
+        ]
         if updated_details:
-            summary_lines.append("\nUpdated:")
+            summary_lines.append("\nUpdated mod details:")
             for detail in updated_details:
-                summary_lines.append(f"  • {detail}")
-        if skipped_details:
-            summary_lines.append("\nSkipped:")
-            for detail in skipped_details:
-                summary_lines.append(f"  • {detail}")
-        if error_details:
-            summary_lines.append("\nErrors:")
-            for detail in error_details:
                 summary_lines.append(f"  • {detail}")
 
         summary_msg = "\n".join(summary_lines)
         print(summary_msg)
 
         if "QMessageBox" in globals():
+            # Show the message box and wait for user dismissal.
             QMessageBox.information(self.__parent_widget, "Mod Version Fixer - Update Complete", summary_msg)
+            # After the message box is closed (OK or X clicked), attempt to refresh MO2.
+            if hasattr(self.__organizer, 'refresh'):
+                try:
+                    self.__organizer.refresh(True)
+                    print("MO2 mod list refreshed (F5 simulated).")
+                except Exception as e:
+                    print(f"Error refreshing MO2: {e}")
+            else:
+                print("Organizer does not support refresh(bool).")
         else:
             print("--- Update Complete ---")
             print(summary_msg)
