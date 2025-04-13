@@ -117,21 +117,27 @@ class FolderModVersionUpdater(mobase.IPluginTool):
 
     def run(self):
         """
-        Opens a folder selection dialog for the user to choose their mods folder.
-        Iterates over each subfolder, reading meta.ini from the [General] section,
-        and if the recorded 'version' differs from 'newestVersion', updates the file.
-        After the update summary is shown, the plugin calls refresh(True) on the organizer 
-        to refresh MO2 (simulate F5) when the user closes the message box.
+        Attempts to pull the mods folder automatically from the organizer.
+        If that fails (e.g., empty or invalid path), falls back to showing a folder
+        selection dialog. Then, it processes each mod folder's meta.ini file, updating
+        the version if needed, and finally refreshes MO2.
         """
-        mods_folder = QFileDialog.getExistingDirectory(
-            self.__parent_widget,
-            "Select Mods Folder",
-            os.path.expanduser("~")
-        )
-
-        if not mods_folder:
-            print("No folder selected; aborting update.")
-            return
+        # Attempt to retrieve mods path directly from the organizer
+        try:
+            mods_folder = self.__organizer.modsPath()  # Use the API method provided by MO2
+            if not mods_folder or not os.path.exists(mods_folder):
+                raise ValueError("Invalid mods path obtained from organizer.")
+        except Exception as e:
+            print(f"Error retrieving mods path automatically: {e}")
+            # Fallback to manual selection if automatic retrieval fails.
+            mods_folder = QFileDialog.getExistingDirectory(
+                self.__parent_widget,
+                "Select Mods Folder",
+                os.path.expanduser("~")
+            )
+            if not mods_folder:
+                print("No folder selected; aborting update.")
+                return
 
         updated = 0
         skipped = 0
