@@ -5,60 +5,85 @@ try:
     )
     from PyQt6.QtGui import QIcon
     from PyQt6.QtCore import Qt
+    print("Using PyQt6")
 except ImportError:
     try:
-        from PySide2.QtWidgets import (
+        from PyQt5.QtWidgets import (
             QMessageBox, QFileDialog, QDialog, QCheckBox, QVBoxLayout, QHBoxLayout,
             QDialogButtonBox, QScrollArea, QWidget, QLabel, QLineEdit
         )
-        from PySide2.QtGui import QIcon
-        from PySide2.QtCore import Qt
+        from PyQt5.QtGui import QIcon
+        from PyQt5.QtCore import Qt
+        print("Using PyQt5")
     except ImportError:
-        print("Error: Neither PyQt6 nor PySide2 could be imported.")
+        try:
+            from PySide2.QtWidgets import (
+                QMessageBox, QFileDialog, QDialog, QCheckBox, QVBoxLayout, QHBoxLayout,
+                QDialogButtonBox, QScrollArea, QWidget, QLabel, QLineEdit
+            )
+            from PySide2.QtGui import QIcon
+            from PySide2.QtCore import Qt
+            print("Using PySide2")
+        except ImportError:
+            print("Error: PyQt6, PyQt5, and PySide2 could not be imported.")
 
-        class QMessageBox:
-            @staticmethod
-            def information(parent, title, message):
-                print(f"INFO [{title}]: {message}")
-            @staticmethod
-            def warning(parent, title, message):
-                print(f"WARNING [{title}]: {message}")
-            @staticmethod
-            def critical(parent, title, message):
-                print(f"CRITICAL [{title}]: {message}")
-            @staticmethod
-            def question(parent, title, message, buttons):
-                print(f"QUESTION [{title}]: {message}")
-                return 16384
+            class QMessageBox:
+                @staticmethod
+                def information(parent, title, message):
+                    print(f"INFO [{title}]: {message}")
 
-        class QFileDialog:
-            @staticmethod
-            def getExistingDirectory(parent, caption, directory=""):
-                return ""
-        class QIcon:
-            pass
-        class QDialog:
-            pass
-        class QCheckBox:
-            pass
-        class QVBoxLayout:
-            pass
-        class QHBoxLayout:
-            pass
-        class QDialogButtonBox:
-            pass
-        class QScrollArea:
-            pass
-        class QWidget:
-            pass
-        class QLabel:
-            pass
-        class QLineEdit:
-            pass
-        class Qt:
-            StrongFocus = None
-            WheelFocus = None
-            ScrollBarAsNeeded = None
+                @staticmethod
+                def warning(parent, title, message):
+                    print(f"WARNING [{title}]: {message}")
+
+                @staticmethod
+                def critical(parent, title, message):
+                    print(f"CRITICAL [{title}]: {message}")
+
+                @staticmethod
+                def question(parent, title, message, buttons):
+                    print(f"QUESTION [{title}]: {message}")
+                    return 16384
+
+            class QFileDialog:
+                @staticmethod
+                def getExistingDirectory(parent, caption, directory=""):
+                    return ""
+
+            class QIcon:
+                pass
+
+            class QDialog:
+                pass
+
+            class QCheckBox:
+                pass
+
+            class QVBoxLayout:
+                pass
+
+            class QHBoxLayout:
+                pass
+
+            class QDialogButtonBox:
+                pass
+
+            class QScrollArea:
+                pass
+
+            class QWidget:
+                pass
+
+            class QLabel:
+                pass
+
+            class QLineEdit:
+                pass
+
+            class Qt:
+                StrongFocus = None
+                WheelFocus = None
+                ScrollBarAsNeeded = None
 
 import os
 import configparser
