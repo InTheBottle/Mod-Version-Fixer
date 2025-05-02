@@ -1,3 +1,9 @@
+import mobase
+import os
+import configparser
+from typing import List, Optional
+
+# Import GUI libraries with fallbacks
 try:
     from PyQt6.QtWidgets import (
         QMessageBox, QFileDialog, QDialog, QCheckBox, QVBoxLayout, QHBoxLayout,
@@ -5,7 +11,7 @@ try:
     )
     from PyQt6.QtGui import QIcon
     from PyQt6.QtCore import Qt
-    print("Using PyQt6")
+    GUI_LIB = "PyQt6"
 except ImportError:
     try:
         from PyQt5.QtWidgets import (
@@ -14,7 +20,7 @@ except ImportError:
         )
         from PyQt5.QtGui import QIcon
         from PyQt5.QtCore import Qt
-        print("Using PyQt5")
+        GUI_LIB = "PyQt5"
     except ImportError:
         try:
             from PySide2.QtWidgets import (
@@ -23,72 +29,52 @@ except ImportError:
             )
             from PySide2.QtGui import QIcon
             from PySide2.QtCore import Qt
-            print("Using PySide2")
+            GUI_LIB = "PySide2"
         except ImportError:
-            print("Error: PyQt6, PyQt5, and PySide2 could not be imported.")
-
+            print("Error: No GUI library (PyQt6, PyQt5, or PySide2) found. Using fallback.")
             class QMessageBox:
                 @staticmethod
                 def information(parent, title, message):
                     print(f"INFO [{title}]: {message}")
-
                 @staticmethod
                 def warning(parent, title, message):
                     print(f"WARNING [{title}]: {message}")
-
                 @staticmethod
                 def critical(parent, title, message):
                     print(f"CRITICAL [{title}]: {message}")
-
                 @staticmethod
                 def question(parent, title, message, buttons):
                     print(f"QUESTION [{title}]: {message}")
                     return 16384
-
             class QFileDialog:
                 @staticmethod
                 def getExistingDirectory(parent, caption, directory=""):
                     return ""
-
             class QIcon:
                 pass
-
             class QDialog:
                 pass
-
             class QCheckBox:
                 pass
-
             class QVBoxLayout:
                 pass
-
             class QHBoxLayout:
                 pass
-
             class QDialogButtonBox:
                 pass
-
             class QScrollArea:
                 pass
-
             class QWidget:
                 pass
-
             class QLabel:
                 pass
-
             class QLineEdit:
                 pass
-
             class Qt:
                 StrongFocus = None
                 WheelFocus = None
                 ScrollBarAsNeeded = None
-
-import os
-import configparser
-import mobase
-from typing import List
+            GUI_LIB = "Fallback"
 
 def parse_numeric_version(v_str: str):
     parts = v_str.split(".")
@@ -104,16 +90,11 @@ def parse_numeric_version(v_str: str):
 
 class ModSelectionDialog(QDialog):
     def __init__(self, mods, parent=None):
-        """
-        Initializes the dialog.
-        :param mods: List of dictionaries for mods with mismatches.
-                     Each dictionary has keys: 'mod', 'current', and 'newest'.
-        """
         super().__init__(parent)
         self.setWindowTitle("Select Mods to Update")
         self.resize(550, 450)
 
-        self.mods = mods  
+        self.mods = mods
         self.checkboxes = []
 
         mainLayout = QVBoxLayout(self)
@@ -177,22 +158,16 @@ class ModSelectionDialog(QDialog):
         self.setLayout(mainLayout)
 
     def toggleSelectAll(self, state):
-        """Check or uncheck all boxes depending on the 'Select All' checkbox state."""
         allChecked = (state == 2)
         for cb in self.checkboxes:
             cb.setChecked(allChecked)
 
     def filterCheckboxes(self, text):
-        """
-        Filters the list of checkboxes based on the search text.
-        Only checkboxes whose text (case-insensitive) contains the search string remain visible.
-        """
         filter_text = text.lower()
         for cb in self.checkboxes:
             cb.setVisible(filter_text in cb.text().lower())
 
     def getSelectedMods(self):
-        """Return a list of mod dictionaries for which the checkbox is checked."""
         selected = []
         for mod, cb in zip(self.mods, self.checkboxes):
             if cb.isChecked():
@@ -202,21 +177,19 @@ class ModSelectionDialog(QDialog):
 class FolderModVersionUpdater(mobase.IPluginTool):
     def __init__(self):
         super().__init__()
-        self.__organizer = None  
+        self.__organizer = None
         self.__parent_widget = None
 
     def init(self, organizer: mobase.IOrganizer) -> bool:
-        self.__organizer = organizer  
+        self.__organizer = organizer
         if not mobase:
             print("Error: mobase module not found.")
             return False
-        if "QMessageBox" not in globals() or "QIcon" not in globals():
-            print("Error: Required GUI library not found.")
-            return False
+        print(f"Mod Version Fixer initialized with {GUI_LIB}.")
         return True
 
     def name(self) -> str:
-        return "Mod Version Fixer"
+        return "ModVersionFixer"
 
     def author(self) -> str:
         return "Bottle"
@@ -231,12 +204,11 @@ class FolderModVersionUpdater(mobase.IPluginTool):
     def version(self) -> mobase.VersionInfo:
         if hasattr(mobase, "VersionInfo") and hasattr(mobase, "ReleaseType"):
             return mobase.VersionInfo(1, 1, 0, mobase.ReleaseType.FINAL)
-        else:
-            print("Error: mobase.VersionInfo or mobase.ReleaseType not available.")
-            return None
+        print("Warning: mobase.VersionInfo or mobase.ReleaseType not available.")
+        return None
 
     def isActive(self) -> bool:
-        return bool(mobase and "QMessageBox" in globals() and "QIcon" in globals())
+        return bool(mobase)
 
     def settings(self) -> List:
         return []
@@ -251,24 +223,18 @@ class FolderModVersionUpdater(mobase.IPluginTool):
         )
 
     def icon(self) -> QIcon:
-        if "QIcon" in globals():
-            return QIcon()
-        else:
-            return None
+        return QIcon()
 
     def setParentWidget(self, widget):
         self.__parent_widget = widget
 
     def display(self):
         if not self.isActive():
-            if "QMessageBox" in globals():
-                QMessageBox.warning(
-                    self.__parent_widget,
-                    "Plugin Error",
-                    "Mod Version Fixer is not active. Check MO2 logs."
-                )
-            else:
-                print("Error: Plugin inactive and no GUI available.")
+            QMessageBox.warning(
+                self.__parent_widget,
+                "Plugin Error",
+                "Mod Version Fixer is not active. Check MO2 logs."
+            )
             return
         self.run()
 
@@ -428,29 +394,13 @@ class FolderModVersionUpdater(mobase.IPluginTool):
             )
             print("User cancelled the checkbox dialog. No changes performed.")
 
-def createPlugin() -> mobase.IPluginTool:
-    try:
-        if not mobase:
-            raise ImportError("mobase module not found.")
-        try:
-            from PyQt6.QtWidgets import (
-                QMessageBox, QFileDialog, QDialog, QCheckBox, QVBoxLayout, QHBoxLayout,
-                QDialogButtonBox, QScrollArea, QWidget, QLabel, QLineEdit
-            )
-            from PyQt6.QtGui import QIcon
-            from PyQt6.QtCore import Qt
-        except ImportError:
-            from PySide2.QtWidgets import (
-                QMessageBox, QFileDialog, QDialog, QCheckBox, QVBoxLayout, QHBoxLayout,
-                QDialogButtonBox, QScrollArea, QWidget, QLabel, QLineEdit
-            )
-            from PySide2.QtGui import QIcon
-            from PySide2.QtCore import Qt
-
-        return FolderModVersionUpdater()
-    except ImportError as e:
-        print(f"Error creating plugin: Missing dependency - {e}")
+def createPlugin() -> Optional[mobase.IPluginTool]:
+    if not mobase:
+        print("Error: mobase module not found. Plugin cannot be loaded.")
         return None
+    try:
+        print(f"Creating Mod Version Fixer plugin with {GUI_LIB}")
+        return FolderModVersionUpdater()
     except Exception as e:
-        print(f"Error creating plugin: {e}")
+        print(f"Error initializing plugin: {e}")
         return None
