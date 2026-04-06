@@ -273,6 +273,7 @@ class FolderModVersionUpdater(mobase.IPluginTool):
                 continue
 
             config = configparser.ConfigParser()
+            config.optionxform = str
             try:
                 config.read(meta_ini_path, encoding="utf-8")
             except Exception as e:
@@ -358,7 +359,7 @@ class FolderModVersionUpdater(mobase.IPluginTool):
                 mod["config"]["General"]["version"] = mod["newest"]
                 try:
                     with open(mod["meta_ini_path"], "w", encoding="utf-8") as f:
-                        mod["config"].write(f)
+                        mod["config"].write(f, space_around_delimiters=False)
                     updated += 1
                     print(f"Updated '{mod['mod']}': {mod['current']} → {mod['newest']}")
                 except Exception as e:
